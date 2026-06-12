@@ -1,0 +1,11 @@
+{
+  "name": "g_apps_scripts",
+  "version": "1.0.0",
+  "description": "Monorepo para proyectos de Google Apps Script",
+  "scripts": {
+    "deploy:bd": "cd BD_Clientes_Pedidos_06-26 && clasp push && clasp deploy"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {}
+}
