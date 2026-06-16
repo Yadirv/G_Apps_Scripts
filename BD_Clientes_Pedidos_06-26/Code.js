@@ -18,16 +18,16 @@ function doPost(e) {
     // ACCIÓN: AÑADIR NUEVO CLIENTE (DESDE ADMIN)
     // ------------------------------------------
     if (action === "add_client") {
-      var sheetClientes = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clientes");
+      var sheetClientes = SpreadsheetApp.openById("1ZHrSO_17gxhP0ZRL_lKsJPKmk9Fl2mv9tP_JNvIYWfc").getSheetByName("Clientes");
       
       if (!sheetClientes) {
-         sheetClientes = SpreadsheetApp.getActiveSpreadsheet().insertSheet("Clientes");
+         sheetClientes = SpreadsheetApp.openById("1ZHrSO_17gxhP0ZRL_lKsJPKmk9Fl2mv9tP_JNvIYWfc").insertSheet("Clientes");
       }
       
       // Si la hoja está totalmente limpia, inicializar fila de títulos
       if (sheetClientes.getLastRow() === 0) {
-        sheetClientes.appendRow(["Nombre del Negocio", "Nombre del Contacto", "C.C o NIT", "Celular", "Correo"]);
-        sheetClientes.getRange("A1:E1").setFontWeight("bold").setBackground("#1E293B").setFontColor("#FFFFFF");
+        sheetClientes.appendRow(["Nombre del Negocio", "Nombre del Contacto", "C.C o NIT", "Celular", "Correo", "Canales"]);
+        sheetClientes.getRange("A1:F1").setFontWeight("bold").setBackground("#1E293B").setFontColor("#FFFFFF");
       }
 
       // Validar que no exista ya el cliente (por CC/NIT o Celular)
@@ -48,7 +48,8 @@ function doPost(e) {
         data.contacto,
         data.cc_nit,
         data.celular,
-        data.correo
+        data.correo,
+        data.canales || ""
       ]);
 
       return ContentService.createTextOutput(JSON.stringify({ 
@@ -61,10 +62,10 @@ function doPost(e) {
     // ACCIÓN: REGISTRAR PEDIDO (DESDE DASHBOARD)
     // ------------------------------------------
     if (action === "add_order") {
-      var sheetPedidos = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Pedidos Recibidos");
+      var sheetPedidos = SpreadsheetApp.openById("1ZHrSO_17gxhP0ZRL_lKsJPKmk9Fl2mv9tP_JNvIYWfc").getSheetByName("Pedidos Recibidos");
       
       if (!sheetPedidos) {
-         sheetPedidos = SpreadsheetApp.getActiveSpreadsheet().insertSheet("Pedidos Recibidos");
+         sheetPedidos = SpreadsheetApp.openById("1ZHrSO_17gxhP0ZRL_lKsJPKmk9Fl2mv9tP_JNvIYWfc").insertSheet("Pedidos Recibidos");
       }
 
       // Si la hoja está totalmente limpia, inicializar fila de títulos
@@ -128,7 +129,7 @@ function doOptions(e) {
 
 function doGet(e) {
   try {
-    var sheetClientes = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clientes");
+    var sheetClientes = SpreadsheetApp.openById("1ZHrSO_17gxhP0ZRL_lKsJPKmk9Fl2mv9tP_JNvIYWfc").getSheetByName("Clientes");
     
     // Si no existe, retornamos array vacío
     if (!sheetClientes || sheetClientes.getLastRow() <= 1) {
@@ -139,14 +140,15 @@ function doGet(e) {
     var datos = sheetClientes.getDataRange().getValues();
     var clientes = [];
     
-    // Asumiendo Fila 1 = Títulos: [Negocio, Contacto, CC/NIT, Celular, Correo]
+    // Fila 1 = Títulos: [Negocio, Contacto, CC/NIT, Celular, Correo, Canales]
     for (var i = 1; i < datos.length; i++) {
       clientes.push({
         negocio: String(datos[i][0]).trim(),
         contacto: String(datos[i][1]).trim(),
         cc_nit: String(datos[i][2]).trim(),
         celular: String(datos[i][3]).trim(),
-        correo: String(datos[i][4]).trim()
+        correo: String(datos[i][4]).trim(),
+        canales: String(datos[i][5] || "").trim()
       });
     }
 
