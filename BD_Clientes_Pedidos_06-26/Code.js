@@ -59,6 +59,85 @@ function doPost(e) {
     }
 
     // ------------------------------------------
+    // ACCIÓN: ACTUALIZAR CLIENTE EXISTENTE
+    // ------------------------------------------
+    if (action === "update_client") {
+      var sheetClientes = SpreadsheetApp.openById("1ZHrSO_17gxhP0ZRL_lKsJPKmk9Fl2mv9tP_JNvIYWfc").getSheetByName("Clientes");
+      if (!sheetClientes) {
+        throw new Error("La hoja de Clientes no existe.");
+      }
+
+      var ccNitBuscado = String(data.cc_nit).trim();
+      if (!ccNitBuscado) {
+        throw new Error("Se requiere C.C/NIT para actualizar un cliente.");
+      }
+
+      var datosActuales = sheetClientes.getDataRange().getValues();
+      var filaEncontrada = -1;
+
+      // Iterar desde fila 1 (asumiendo fila 0 son títulos)
+      for (var i = 1; i < datosActuales.length; i++) {
+        var ccNitExistente = String(datosActuales[i][2]).trim();
+        if (ccNitExistente === ccNitBuscado) {
+          filaEncontrada = i + 1; // +1 porque la fila en Sheet es 1-indexed
+          break;
+        }
+      }
+
+      if (filaEncontrada !== -1) {
+        // Actualizar valores en la hoja: [Negocio(A), Contacto(B), CC(C), Celular(D), Correo(E), Canales(F)]
+        if (data.negocio) sheetClientes.getRange(filaEncontrada, 1).setValue(data.negocio);
+        if (data.contacto) sheetClientes.getRange(filaEncontrada, 2).setValue(data.contacto);
+        if (data.celular) sheetClientes.getRange(filaEncontrada, 4).setValue(data.celular);
+        if (data.correo) sheetClientes.getRange(filaEncontrada, 5).setValue(data.correo);
+        if (data.canales !== undefined) sheetClientes.getRange(filaEncontrada, 6).setValue(data.canales);
+
+        return ContentService.createTextOutput(JSON.stringify({ 
+          "status": "success", 
+          "message": "Cliente actualizado exitosamente" 
+        })).setMimeType(ContentService.MimeType.JSON);
+      } else {
+        return ContentService.createTextOutput(JSON.stringify({ 
+          "status": "error", 
+          "message": "No se encontró el cliente con CC/NIT: " + ccNitBuscado
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    // ------------------------------------------
+    // ACCIÓN: ELIMINAR CLIENTE
+    // ------------------------------------------
+    if (action === "delete_client") {
+      var sheetClientes = SpreadsheetApp.openById("1ZHrSO_17gxhP0ZRL_lKsJPKmk9Fl2mv9tP_JNvIYWfc").getSheetByName("Directorio Clientes");
+      var dataClientes = sheetClientes.getDataRange().getValues();
+      var ccNitBuscado = String(data.cc_nit).trim();
+      
+      var filaEncontrada = -1;
+      
+      // Buscar el cliente por CC/NIT (Columna 3)
+      for (var i = 1; i < dataClientes.length; i++) {
+        var nitActual = String(dataClientes[i][2]).trim();
+        if (nitActual === ccNitBuscado) {
+          filaEncontrada = i + 1; // +1 porque getValues es 0-indexed y sheets son 1-indexed
+          break;
+        }
+      }
+      
+      if (filaEncontrada !== -1) {
+        sheetClientes.deleteRow(filaEncontrada);
+        return ContentService.createTextOutput(JSON.stringify({ 
+          "status": "success", 
+          "message": "Cliente eliminado exitosamente" 
+        })).setMimeType(ContentService.MimeType.JSON);
+      } else {
+        return ContentService.createTextOutput(JSON.stringify({ 
+          "status": "error", 
+          "message": "No se encontró el cliente con CC/NIT: " + ccNitBuscado
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    // ------------------------------------------
     // ACCIÓN: REGISTRAR PEDIDO (DESDE DASHBOARD)
     // ------------------------------------------
     if (action === "add_order") {
