@@ -108,7 +108,7 @@ function doPost(e) {
     // ACCIÓN: ELIMINAR CLIENTE
     // ------------------------------------------
     if (action === "delete_client") {
-      var sheetClientes = SpreadsheetApp.openById("1ZHrSO_17gxhP0ZRL_lKsJPKmk9Fl2mv9tP_JNvIYWfc").getSheetByName("Directorio Clientes");
+      var sheetClientes = SpreadsheetApp.openById("1ZHrSO_17gxhP0ZRL_lKsJPKmk9Fl2mv9tP_JNvIYWfc").getSheetByName("Clientes");
       var dataClientes = sheetClientes.getDataRange().getValues();
       var ccNitBuscado = String(data.cc_nit).trim();
       
@@ -158,6 +158,7 @@ function doPost(e) {
       var negocio = data.negocio;
       var fecha = data.fecha;
       var incluyeIva = data.incluye_iva ? "SÍ" : "NO";
+      var totalPuntos = data.totalPuntos || 0;
       var items = data.items;
 
       // Iterar e insertar de manera incremental cada ítem para evitar sobreescritura
@@ -177,6 +178,19 @@ function doPost(e) {
           item.totalItem
         ]);
       });
+
+      // LÓGICA DE PUNTOS
+      if (totalPuntos > 0) {
+        var sheetPuntos = SpreadsheetApp.openById("1ZHrSO_17gxhP0ZRL_lKsJPKmk9Fl2mv9tP_JNvIYWfc").getSheetByName("Puntos_Clientes");
+        if (!sheetPuntos) {
+          sheetPuntos = SpreadsheetApp.openById("1ZHrSO_17gxhP0ZRL_lKsJPKmk9Fl2mv9tP_JNvIYWfc").insertSheet("Puntos_Clientes");
+        }
+        if (sheetPuntos.getLastRow() === 0) {
+          sheetPuntos.appendRow(["C.C o NIT", "Nombre del Negocio", "Fecha", "Total Puntos"]);
+          sheetPuntos.getRange("A1:D1").setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
+        }
+        sheetPuntos.appendRow([cc_nit, negocio, fecha, totalPuntos]);
+      }
 
       return ContentService.createTextOutput(JSON.stringify({ 
         "status": "success", 
@@ -239,3 +253,6 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
+
+
+
