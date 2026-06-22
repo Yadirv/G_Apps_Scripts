@@ -333,4 +333,68 @@ Write-Host "¡Sin este paso, el Dashboard y el Formulario Admin darán error de 
 Write-Host "=====================================================================" -ForegroundColor Yellow
 
 Write-Host ""
-Write-Host "🎉 Proceso completado." -ForegroundColor Cyan
+Write-Host "=====================================================================" -ForegroundColor Magenta
+Write-Host "PASO FINAL: CONTROL DE VERSIONES (GIT PUSH)" -ForegroundColor Magenta
+Write-Host "El orden lógico correcto de despliegue completo es:" -ForegroundColor Cyan
+Write-Host " 1. Subir cambios a Google Apps Script (clasp push/deploy) [REALIZADO]"
+Write-Host " 2. Inyectar la nueva URL en los repositorios Frontend locales [REALIZADO]"
+Write-Host " 3. Subir a GitHub (git push) el repositorio de Apps Script para guardar historial."
+Write-Host " 4. Subir a GitHub (git push) los repositorios Frontend modificados para que"
+Write-Host "    plataformas como Vercel/Netlify se reconstruyan con la nueva URL."
+Write-Host "=====================================================================" -ForegroundColor Magenta
+Write-Host ""
+
+$doGitPush = Read-Host "¿Deseas hacer el commit y git push automáticamente ahora a todos los repositorios involucrados? (S/N)"
+if ($doGitPush -match '^[sS]') {
+    $commitMsg = Read-Host "Ingresa el mensaje para el commit (ej: fix: actualizar BD clientes)"
+    if ([string]::IsNullOrWhiteSpace($commitMsg)) {
+        $commitMsg = "chore: despliegue de Apps Script y actualizacion de URL"
+    }
+
+    # 1. Hacer push del repositorio de Apps Script actual
+    Write-Host "`n>> [1/2] Realizando git push en el repositorio de Apps Script..." -ForegroundColor Cyan
+    Set-Location $ProjectDir
+    $gitRootAppsScript = git rev-parse --show-toplevel 2>$null
+    if ($gitRootAppsScript) {
+        Set-Location $gitRootAppsScript
+        git add .
+        git commit -m $commitMsg
+        git push
+    }
+
+    # 2. Hacer push de los repositorios frontend modificados
+    Write-Host "`n>> [2/2] Realizando git push en repositorios Frontend vinculados..." -ForegroundColor Cyan
+    $frontendDirs = @()
+    if ($ProjectEnv.ContainsKey($Subfolder)) {
+        foreach ($key in $ProjectEnv[$Subfolder].Keys) {
+            if ($key -match "_PATH$") {
+                $pathValue = $ProjectEnv[$Subfolder][$key]
+                if (Test-Path $pathValue) {
+                    $fileDir = Split-Path $pathValue -Parent
+                    Set-Location $fileDir
+                    $gitRoot = git rev-parse --show-toplevel 2>$null
+                    if ($gitRoot -and $frontendDirs -notcontains $gitRoot) {
+                        $frontendDirs += $gitRoot
+                    }
+                }
+            }
+        }
+    }
+
+    foreach ($repo in $frontendDirs) {
+        if ($repo -ne $gitRootAppsScript) {
+            Write-Host " -> Sincronizando Frontend en: $repo" -ForegroundColor Green
+            Set-Location $repo
+            git add .
+            git commit -m $commitMsg
+            git push
+        }
+    }
+    
+    Write-Host "`n🎉 Todos los repositorios han sido sincronizados con GitHub." -ForegroundColor Green
+} else {
+    Write-Host "`nOperación de Git cancelada. Recuerda hacer commit y push manualmente siguiendo el orden lógico." -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "🎉 Proceso de despliegue completado." -ForegroundColor Cyan

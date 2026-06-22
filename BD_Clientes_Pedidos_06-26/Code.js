@@ -2,6 +2,30 @@
 // GOOGLE APPS SCRIPT: RECEPTOR DE PEDIDOS B2B Y CLIENTES
 // ==========================================
 
+var ALL_CHANNELS = ['C1', 'C2', 'C3', 'C4'];
+
+function parseCanales(raw) {
+  var input = String(raw || '').toUpperCase().trim();
+  if (!input) return [];
+  if (/(TODOS|TODAS|ALL)/.test(input)) return ALL_CHANNELS.slice();
+
+  var matches = input.match(/C[1-4]/g) || [];
+  var seen = {};
+  var unique = [];
+  for (var i = 0; i < matches.length; i++) {
+    var ch = matches[i];
+    if (!seen[ch]) {
+      seen[ch] = true;
+      unique.push(ch);
+    }
+  }
+  return ALL_CHANNELS.filter(function(ch) { return unique.indexOf(ch) !== -1; });
+}
+
+function normalizeCanales(raw) {
+  return parseCanales(raw).join(',');
+}
+
 function doPost(e) {
   // Configurar cabeceras CORS
   var headers = {
@@ -43,13 +67,21 @@ function doPost(e) {
         }
       }
 
+      var canalesNormalizados = normalizeCanales(data.canales);
+      if (!canalesNormalizados) {
+        return ContentService.createTextOutput(JSON.stringify({
+          "status": "error",
+          "message": "Debes habilitar al menos un canal de venta (C1, C2, C3 o C4)."
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+
       sheetClientes.appendRow([
         data.negocio,
         data.contacto,
         data.cc_nit,
         data.celular,
         data.correo,
-        data.canales || ""
+        canalesNormalizados
       ]);
 
       return ContentService.createTextOutput(JSON.stringify({ 
@@ -90,7 +122,16 @@ function doPost(e) {
         if (data.contacto) sheetClientes.getRange(filaEncontrada, 2).setValue(data.contacto);
         if (data.celular) sheetClientes.getRange(filaEncontrada, 4).setValue(data.celular);
         if (data.correo) sheetClientes.getRange(filaEncontrada, 5).setValue(data.correo);
-        if (data.canales !== undefined) sheetClientes.getRange(filaEncontrada, 6).setValue(data.canales);
+        if (data.canales !== undefined) {
+          var canalesNormalizados = normalizeCanales(data.canales);
+          if (!canalesNormalizados) {
+            return ContentService.createTextOutput(JSON.stringify({
+              "status": "error",
+              "message": "Debes habilitar al menos un canal de venta (C1, C2, C3 o C4)."
+            })).setMimeType(ContentService.MimeType.JSON);
+          }
+          sheetClientes.getRange(filaEncontrada, 6).setValue(canalesNormalizados);
+        }
 
         return ContentService.createTextOutput(JSON.stringify({ 
           "status": "success", 
@@ -235,13 +276,14 @@ function doGet(e) {
     
     // Fila 1 = Títulos: [Negocio, Contacto, CC/NIT, Celular, Correo, Canales]
     for (var i = 1; i < datos.length; i++) {
+      var canalesNormalizados = normalizeCanales(datos[i][5]);
       clientes.push({
         negocio: String(datos[i][0]).trim(),
         contacto: String(datos[i][1]).trim(),
         cc_nit: String(datos[i][2]).trim(),
         celular: String(datos[i][3]).trim(),
         correo: String(datos[i][4]).trim(),
-        canales: String(datos[i][5] || "").trim()
+        canales: canalesNormalizados
       });
     }
 
@@ -253,6 +295,7 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
+
 
 
 
